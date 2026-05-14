@@ -1,0 +1,10 @@
+secrets.yaml
+*.log
+*.db
+*.db-shm
+*.db-wal
+.storage/
+deps/
+tts/
+home-assistant.log*
+__pycache__/

@@ -1,0 +1,58 @@
+- id: auto_mop_after_vacuum
+  alias: "Nach Saugen automatisch wischen"
+  description: Wischt nur die Räume die auch gesaugt wurden (via input_text.last_segments).
+  triggers:
+  - platform: state
+    entity_id: vacuum.saugroboter
+    to: docked
+  conditions:
+  - condition: template
+    value_template: '{{ state_attr("vacuum.saugroboter", "fan_speed") in ["balanced",
+      "turbo", "max", "quiet"] }}'
+  - condition: state
+    entity_id: input_boolean.wischen_aktiv
+    state: 'off'
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.wischen_aktiv
+  - delay: 00:00:05
+  - data:
+      entity_id: vacuum.saugroboter
+      fan_speed: 'off'
+    action: vacuum.set_fan_speed
+  - data:
+      entity_id: select.saugroboter_mop_intensity
+      option: intense
+    action: select.select_option
+  - data:
+      entity_id: select.saugroboter_mop_mode
+      option: deep_plus
+    action: select.select_option
+  - delay: 00:00:03
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_text.last_segments') not in ['', '[]'] }}"
+      sequence:
+      - data:
+          entity_id: vacuum.saugroboter
+          command: app_segment_clean
+          params: "{{ states('input_text.last_segments') | from_json }}"
+        action: vacuum.send_command
+    default:
+    - data:
+        entity_id: vacuum.saugroboter
+        command: app_segment_clean
+        params: [16, 17, 18, 19, 20, 22, 23]
+      action: vacuum.send_command
+  - wait_for_trigger:
+    - platform: state
+      entity_id: vacuum.saugroboter
+      to: docked
+    timeout: '02:00:00'
+    continue_on_timeout: true
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.wischen_aktiv
+  mode: single
